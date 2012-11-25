@@ -28,7 +28,6 @@ function cat(path, res) {
 }
 
 function ls(dir, res) {
-  var util = require('util');
   Q.ncall(fs.readdir, fs, dir).then(function(files) {
     return Q.all(files.map(function(file) {
       return Q.ncall(fs.stat, fs, file).then(function(stat) {
@@ -51,6 +50,26 @@ function ls(dir, res) {
   });
 }
 
+function echo(path, req, res) {
+  var stream = fs.createWriteStream(path);
+  stream.on('error', function(err) {
+    if (err.code == 'ENOENT') {
+      error(res, 404, 'File not found: \'' + path + '\'');
+      return;
+    }
+    error(res, 500, JSON.stringify(err));
+  });
+  stream.on('open', function() {
+    res.writeHead(200, {'Content-Type': 'text/plain'});
+  });
+  req.on('end', function() {
+    // If we haven't thrown an error, end the response.
+    if (res.writable)
+      res.end();
+  });
+  req.pipe(stream);
+}
+
 http.createServer(function (req, res) {
   var is_dir = req.url.charAt(req.url.length - 1) == '/';
   var cwd = process.cwd();
@@ -69,6 +88,10 @@ http.createServer(function (req, res) {
       } else {
         cat(path, res);
       }
+      break;
+    }
+    case 'PUT': {
+      echo(path, req, res);
       break;
     }
     default: {
