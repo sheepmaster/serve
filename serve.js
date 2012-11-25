@@ -70,12 +70,13 @@ function echo(path, req, res) {
   req.pipe(stream);
 }
 
+var base_dir = process.argv[2] || process.cwd();
+
 http.createServer(function (req, res) {
   var is_dir = req.url.charAt(req.url.length - 1) == '/';
-  var cwd = process.cwd();
-  var path = Path.resolve(cwd, req.url.substr(1));
+  var path = Path.resolve(base_dir, req.url.substr(1));
   // console.log(path + ' is dir: ' + is_dir);
-  if (path.substr(0, cwd.length) != cwd) {
+  if (path.substr(0, base_dir.length) != base_dir) {
     error(res, 403, 'Permission denied: \'' + path + '\'');
     return;
   }
